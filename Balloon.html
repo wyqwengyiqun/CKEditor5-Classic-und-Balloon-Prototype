@@ -1,0 +1,196 @@
+<!--文档类型与根标签-->
+<!doctype html>     <!--声明这是HTML5文档。让浏览器用标准模式解析页面，避免怪异模式带来的样式/行为差异。-->
+<html lang="en">    <!--页面根元素。lang="en" 表示页面默认语言是英文（影响屏幕阅读器、搜索引擎、拼写检查等）-->
+
+<!-- <head>：页面元信息、标题、外部脚本与样式 -->
+<head>
+  <meta charset="utf-8" />    <!--指定编码为 UTF-8。确保中文/特殊字符不会乱码。-->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />  <!--移动端适配关键设置：width=device-width：视口宽度等于设备宽度 initial-scale=1：初始缩放为 1-->
+  <title>CKEditor 5 - Balloon UI Demo</title>     <!--浏览器标签页标题。-->
+
+  <!-- CKEditor 5 Balloon build (CDN) -->
+  <!--从 CDN 加载 CKEditor 5 的 Balloon Editor 构建版。加载完成后，全局会有 BalloonEditor 这个对象可用。你后面用的 BalloonEditor.create(...) 就来自这里。-->
+  <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/balloon/ckeditor.js"></script> 
+  <!--页面样式
+  body：设置系统字体、页面外边距。
+  .wrap：限制内容最大宽度，并居中（更像 demo 页面）。
+  .row：让按钮行横向排列、自动换行、间距统一。
+  .btn / .btn:hover：按钮外观和 hover 效果。
+  #status：状态文字更小、更淡。
+  #editorBalloon：编辑器容器边框、圆角、内边距、最小高度（让它看起来像可编辑区域）。
+  pre：输出区用等宽块展示 HTML。
+  .hint：提示文字更小更淡。
+  -->
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+    .btn { padding: 8px 12px; border: 1px solid #ccc; background: #fff; border-radius: 8px; cursor: pointer; }
+    .btn:hover { background: #f6f6f6; }
+    #status { font-size: 14px; opacity: 0.85; }
+    #editorBalloon {
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 220px;
+    }
+    pre { padding: 12px; border: 1px solid #e5e5e5; border-radius: 10px; overflow: auto; background: #fafafa; }
+    .hint { font-size: 13px; opacity: 0.75; margin-top: 8px; }
+  </style>
+</head>
+<!--<body>：页面可见内容（按钮 + 编辑器 + 输出区）-->
+<body>
+  <!--外层容器,用来控制整体布局宽度和居中。-->
+  <div class="wrap">  
+    <h1>CKEditor 5 — Balloon UI</h1> <!--标题-->
+    <!--
+    按钮行 + 状态文本
+    三个按钮分别用于：写入示例内容,导出 HTML 到输出区,清空编辑器
+    #status 用来显示编辑器状态（未初始化/初始化/正在编辑/就绪/已导出等）
+    -->
+    <div class="row">
+      <button class="btn" id="btnSetSample">Set sample content</button>
+      <button class="btn" id="btnGetHtml">Get HTML</button>
+      <button class="btn" id="btnClear">Clear</button>
+      <span id="status">Status: not initialized</span>
+    </div>
+    <!--
+    编辑器容器（核心）: 这是 CKEditor 要“接管”的 DOM 元素。
+    BalloonEditor.create(document.querySelector("#editorBalloon"), ...) 会把它变成可编辑区域。
+    Balloon UI 的特点：选中文字时，在文字旁边浮现工具栏（气泡工具栏）。
+    -->
+    <div id="editorBalloon">
+      <h2>Balloon Editor</h2>
+      <p>Select some text to see the floating (balloon) toolbar.</p>
+      <p><strong>Tip:</strong> Highlight a phrase to edit it.</p>
+    </div>
+    <div class="hint">Balloon UI shows a contextual toolbar near selection (great for in-place editing).</div>  <!--提示文本-->
+    <!--
+    输出区（显示 getData() 的 HTML）
+    用 <pre> 保留换行和空格，方便看导出的 HTML。
+    -->
+    <h3>Output (HTML)</h3>
+    <pre id="output">(click “Get HTML”)</pre>
+  </div>
+
+  <!-- <script>：逻辑代码（初始化编辑器 + 绑定按钮事件）-->
+  <script>
+    // 声明变量保存编辑器实例,初始化后把 editor 对象存到这里，后面按钮点击才能调用它的方法（如 setData() / getData()）。
+    let balloonEditor;   
+    /*
+    创建编辑器: document.querySelector("#editorBalloon") , 找到编辑器容器 <div id="editorBalloon">。
+    配置对象（第二个参数）配置了两大块：
+
+    工具栏配置 toolbar
+    items：决定气泡工具栏里有哪些按钮、顺序如何。
+    "bold"：加粗
+    "italic"：斜体
+    "underline"：下划线
+    "|"：分隔线（视觉分组）
+    "link"：插入/编辑链接
+    "bulletedList"：无序列表
+    "numberedList"：有序列表
+    "blockQuote"：引用块
+    "undo" / "redo"：撤销 / 重做
+    shouldNotGroupWhenFull: true。工具栏空间不够时，CKEditor 有时会把按钮折叠进“更多”菜单。这个设置倾向于不要自动分组折叠（尽量直接显示）。
+
+    链接配置 link
+    addTargetToExternalLinks: true。外部链接自动加 target="_blank"（新窗口打开）。
+    defaultProtocol: "https://"。用户输入 example.com 时，自动补成 https://example.com。
+    */
+    BalloonEditor.create(document.querySelector("#editorBalloon"), {
+      toolbar: {
+        items: [
+          "bold", "italic", "underline",
+          "|",
+          "link",
+          "|",
+          "bulletedList", "numberedList",
+          "|",
+          "blockQuote",
+          "|",
+          "undo", "redo"
+        ],
+        shouldNotGroupWhenFull: true
+      },
+      link: {
+        addTargetToExternalLinks: true,
+        defaultProtocol: "https://"
+      }
+    })
+    /*
+    初始化成功后的处理 .then(...)
+    balloonEditor = editor; 保存实例到全局变量，供按钮操作。
+    更新状态文本为 “initialized”。
+    */
+    .then(editor => {
+      balloonEditor = editor;
+      document.getElementById("status").textContent = "Status: initialized (Balloon)";
+      /*
+      监听内容变化（用户正在编辑）这段是在做一个“防抖”的状态提示：每次编辑器内容变化时：立即显示 editing…
+      clearTimeout(...)：如果之前已经设置了“500ms 后变 ready”的计时器，就取消掉（避免频繁变化导致多次触发）
+      setTimeout(..., 500)：如果用户500ms没继续输入/改动,就把状态改成ready。window.__balloonTimer是挂在全局对象window上的一个临时计时器变量,用来记住计时器ID
+      */
+      editor.model.document.on("change:data", () => {
+        document.getElementById("status").textContent = "Status: editing… (Balloon)";
+        clearTimeout(window.__balloonTimer);
+        window.__balloonTimer = setTimeout(() => {
+          document.getElementById("status").textContent = "Status: ready (Balloon)";
+        }, 500);
+      });
+    })
+    /*
+    初始化失败处理 .catch(...),如果CKEditor加载失败、配置不对、选择器找不到元素等，会进入这里。
+    console.error(err)：在浏览器控制台打印错误信息。
+    页面状态显示初始化失败。
+    */
+    .catch(err => {
+      console.error(err);
+      document.getElementById("status").textContent = "Status: init failed (see console)";
+    });
+    /*
+    按钮事件：写入示例内容
+    先检查balloonEditor是否存在：避免编辑器还没初始化就点按钮报错。
+    setData(...)：用一段HTML作为编辑器内容（会覆盖当前内容）。你用模板字符串写了HTML，包括 <h2>、<p>、<em>、<strong> 等。
+    
+    <em> 标签表示强调（emphasis）——语义上是在句子里“重读/突出”某些词。浏览器默认会把它显示成斜体，但重点同样是语义而不只是样式。
+    <strong> 标签用来表示**“强强调/重要性”的文本（语义标签）。浏览器默认会把它显示成加粗**，但它的重点是语义而不只是样式。
+    */
+    document.getElementById("btnSetSample").addEventListener("click", () => {
+      if (!balloonEditor) return;
+      balloonEditor.setData(
+        `<h2>Sample (Balloon)</h2>
+         <p>This is great for <em>inline</em> editing experiences.</p> 
+         <p>Try selecting <strong>any text</strong> to open the toolbar.</p>`
+      );
+    });
+    /*
+    按钮事件：导出HTML
+    getData()：从编辑器拿到当前内容的HTML字符串。把它放到 <pre id="output"> 里显示。
+    注意你用的是 output.textContent：这会把HTML当“纯文本”显示出来（不会被浏览器渲染成真正的标签），更安全，也更适合查看源码。
+    */
+    document.getElementById("btnGetHtml").addEventListener("click", () => {
+      if (!balloonEditor) return;
+      document.getElementById("output").textContent = balloonEditor.getData();
+      document.getElementById("status").textContent = "Status: HTML exported (Balloon)";
+    });
+    /*
+    按钮事件：清空编辑器
+    setData("")：把编辑器内容设为空。
+    输出区显示 (cleared)。
+    状态显示 cleared。
+    */
+    document.getElementById("btnClear").addEventListener("click", () => {
+      if (!balloonEditor) return;
+      balloonEditor.setData("");
+      document.getElementById("output").textContent = "(cleared)";
+      document.getElementById("status").textContent = "Status: cleared (Balloon)";
+    });
+  </script>
+  <!--
+  Balloon UI 的“气泡工具栏”为什么会出现？
+  Balloon Editor 的特点是：工具栏不是固定在顶部，而是跟随选区。
+  当你鼠标选中一段文字时，编辑器检测到selection变化，会在附近显示浮动工具栏（包含你配置的 items）。
+  -->
+</body>
+</html>
