@@ -1,0 +1,192 @@
+<!doctype html>        
+<html lang="en">      
+<head>
+  
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CKEditor 5 - Classic UI Demo</title>
+
+  <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+   
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+    textarea { width: 100%; min-height: 220px; }
+    #status { font-size: 14px; opacity: 0.85; }
+    .btn { padding: 8px 12px; border: 1px solid #ccc; background: #fff; border-radius: 8px; cursor: pointer; }
+    .btn:hover { background: #f6f6f6; }
+    pre { padding: 12px; border: 1px solid #e5e5e5; border-radius: 10px; overflow: auto; background: #fafafa; }
+
+    /* ===== Task bar (sticky top) ===== */
+    .taskbar{
+      position: sticky;
+      top: 0;
+      z-index: 999;
+      background: #fff;
+      border: 1px solid #e7e7e7;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin: 0 0 16px 0;
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    }
+
+    .taskbar__inner{
+      display: grid;
+      gap: 8px;
+    }
+
+    .taskbar__title{
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .taskbar__text{
+      font-size: 14px;
+      line-height: 1.35;
+      opacity: .95;
+    }
+
+    .taskbar__text ol{
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+
+    .taskbar__note{
+      margin-top: 8px;
+      font-size: 13px;
+      opacity: .8;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="wrap">
+
+    <!-- Task / Aufgabe: sticky header -->
+    <div class="taskbar" role="region" aria-label="Testaufgabe">
+     <div class="taskbar__inner">
+      <div class="taskbar__title">Ihr habt 10 Minuten Zeit, um die Testaufgaben zu erfüllen.</div>
+	  
+	   <details class="taskbar__textWrap" open>
+         <summary class="taskbar__textSummary">
+           Aufgabe (zum Ein-/Ausklappen anklicken)
+         </summary>
+         <div class="taskbar__text">
+           <ol>
+             <li> Nehmen Sie sich 10 Sekunden, um die Oberfläche kurz zu betrachten. Welche Funktionseinstiege sehen Sie?</li>
+             <li> Auf „Set sample content“ klicken, damit im Editorbereich Beispieltext erscheint.</li>
+             <li> Im Beispieltext beliebige 2–5 Wörter markieren und einstellen auf: <b>fett</b>, <i>kursiv</i>.</li>
+             <li> Einen Textabschnitt markieren und einen Link einfügen zu: https://example.com (oder eine beliebige URL).</li>
+             <li> Am Ende drei neue Zeilen hinzufügen und diese drei Zeilen in eine ungeordnete Liste umwandeln.</li>
+             <li> Einen ganzen Satz markieren und als Zitatblock formatieren.</li>
+             <li> Rückgängig & Wiederholen: Erst Undo klicken, danach Redo klicken. Auf „Get HTML“ klicken und beobachten, dass im Bereich Output HTML-Code erscheint. Auf „Clear“ klicken, sodass der Editorinhalt leer ist und im Output „(cleared)“ angezeigt wird.</li>
+             <li> Schauen Sie sich Ihr gerade erstelltes Ergebnis kurz an. Wie zufrieden wären Sie insgesamt mit der Nutzung?</li>   
+           </ol>
+         </div>
+	   </details>  
+	   
+	   <details class="taskbar__note">
+         <summary><b>Hinweis (zum Ein-/Ausklappen anklicken)</b></summary>
+         <div style="margin-top:8px;">
+           <b>Hinweis: Q1 bewertet die Auffindbarkeit von Funktionen (z.B. Fett/Link/Liste/Zitat), Q2 bewertet den Layout-/Toolbar-Komfort (oben fix vs. schwebend), Q3 bewertet die visuelle Klarheit/Übersichtlichkeit (Ersteindruck-/Beobachtungsaufgabe), Q4 bewertet die Erlernbarkeit ohne Erklärung. Zusätzlich erfassen die UMUX-Items U1–U4 die Gesamtzufriedenheit, Komplexität, Bedienbarkeit und den Bedarf an Unterstützung, wobei am Ende jeder Runde sofort der Fragebogen ausgefüllt wird, damit die Bewertung auf der gerade erlebten Nutzung basiert.</b>
+         </div>
+       </details>   
+		
+     </div>
+    </div>
+	
+    <h1>CKEditor 5 — Classic UI</h1>
+
+    <div class="row">
+      <button class="btn" id="btnSetSample">Set sample content</button>
+      <button class="btn" id="btnGetHtml">Get HTML</button>
+      <button class="btn" id="btnClear">Clear</button>
+      <span id="status">Status: not initialized</span>
+    </div>
+
+    <textarea id="editorClassic">
+    <h2>Classic Editor</h2>
+    <p>Type here…</p>
+	
+    <ul>
+      <li>Toolbar stays at the top</li>
+      <li>Good for document-style editing</li>
+    </ul>
+    </textarea>
+   
+    <h3>Output (HTML)</h3>
+    <pre id="output">(click “Get HTML”)</pre>
+  </div>
+  
+  <script>
+    
+    let classicEditor; 
+	
+    ClassicEditor.create(document.querySelector("#editorClassic"), {
+
+      toolbar: {
+        items: [
+          "heading",
+          "|",
+          "bold", "italic", "underline", "link",
+          "|",
+          "bulletedList", "numberedList",
+          "|",
+          "blockQuote",
+          "|",
+          "undo", "redo"
+        ],
+        shouldNotGroupWhenFull: true
+      },
+
+      link: {
+        addTargetToExternalLinks: true,
+        defaultProtocol: "https://"
+      }
+    })
+
+    .then(editor => {
+      classicEditor = editor;
+      document.getElementById("status").textContent = "Status: initialized (Classic)";
+      // Optional: autosave-like output preview
+      editor.model.document.on("change:data", () => {
+        // lightweight status ping
+        document.getElementById("status").textContent = "Status: editing… (Classic)";
+        clearTimeout(window.__classicTimer);
+        window.__classicTimer = setTimeout(() => {
+          document.getElementById("status").textContent = "Status: ready (Classic)";
+        }, 500);
+      });
+    })
+
+    .catch(err => {
+      console.error(err);
+      document.getElementById("status").textContent = "Status: init failed (see console)";
+    });
+
+    document.getElementById("btnSetSample").addEventListener("click", () => {
+      if (!classicEditor) return;
+      classicEditor.setData(
+        `<h2>Sample (Classic)</h2>
+         <p>This content was set via <code>editor.setData()</code>.</p>
+         <p><a href="https://ckeditor.com">External link</a> opens in a new tab.</p>`
+      );
+    });	
+	
+    document.getElementById("btnGetHtml").addEventListener("click", () => {
+      if (!classicEditor) return;
+      document.getElementById("output").textContent = classicEditor.getData();
+      document.getElementById("status").textContent = "Status: HTML exported (Classic)";
+    });
+	
+    document.getElementById("btnClear").addEventListener("click", () => {
+      if (!classicEditor) return;
+      classicEditor.setData("");
+      document.getElementById("output").textContent = "(cleared)";
+      document.getElementById("status").textContent = "Status: cleared (Classic)";
+    });  	
+  </script>
+  
+</body>
+</html>
